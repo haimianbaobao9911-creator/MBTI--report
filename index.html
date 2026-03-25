@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>MBTI 投放复盘工作台 Pro</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        :root {
+            --primary: #6366f1; --bg: #f8fafc; --card: #ffffff;
+            --sidebar: #0f172a; --text-main: #1e293b; --text-sub: #64748b;
+            --border: #e2e8f0; --accent: #10b981; --warn: #f59e0b;
+        }
+        body { font-family: "PingFang SC", sans-serif; background: var(--bg); margin: 0; display: flex; height: 100vh; color: var(--text-main); }
+
+        /* 侧边栏 */
+        .sidebar { width: 240px; background: var(--sidebar); color: #fff; display: flex; flex-direction: column; flex-shrink: 0; }
+        .sidebar-header { padding: 24px; font-size: 16px; font-weight: 800; color: var(--primary); border-bottom: 1px solid #1e293b; }
+        .week-list { flex: 1; overflow-y: auto; padding: 12px; }
+        .week-item { padding: 12px 16px; margin-bottom: 6px; cursor: pointer; border-radius: 8px; font-size: 14px; display: flex; justify-content: space-between; transition: 0.2s; color: #94a3b8; }
+        .week-item.active { background: var(--primary); color: #fff; font-weight: 600; }
+        .btn-add { margin: 16px; padding: 10px; border: 1px dashed #334155; background: transparent; color: #94a3b8; border-radius: 8px; cursor: pointer; }
+
+        /* 内容区 */
+        .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .tabs { background: #fff; padding: 0 40px; display: flex; gap: 40px; border-bottom: 1px solid var(--border); height: 64px; align-items: center; }
+        .tab { height: 100%; display: flex; align-items: center; cursor: pointer; color: var(--text-sub); border-bottom: 2px solid transparent; transition: 0.2s; font-size: 15px; }
+        .tab.active { color: var(--primary); border-color: var(--primary); font-weight: 600; }
+
+        .content { flex: 1; padding: 32px; overflow-y: auto; padding-bottom: 150px; }
+        .item-card { background: #fff; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 12px; overflow: hidden; }
+        .item-header { display: flex; align-items: center; gap: 16px; padding: 16px 24px; background: #fff; }
+        
+        .title-input { border: 1px solid transparent; font-size: 16px; font-weight: 600; width: 100%; padding: 4px; border-radius: 4px; transition: 0.2s; }
+        .title-input:hover { border-color: var(--border); background: #f9fafb; }
+        .title-input:focus { border-color: var(--primary); background: #fff; outline: none; }
+
+        .vote-tag { background: #f1f5f9; border-radius: 6px; display: flex; align-items: center; padding: 4px; gap: 8px; }
+        .vote-btn { width: 24px; height: 24px; background: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .vote-num { color: var(--primary); font-weight: 800; min-width: 24px; text-align: center; }
+
+        /* 排行榜网格 */
+        .perf-grid { display: grid; grid-template-columns: 2.5fr 1fr 1fr 120px 40px; gap: 20px; align-items: center; padding: 16px 24px; cursor: pointer; }
+        .badge { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-right: 4px; }
+        .badge-ap { background: #eef2ff; color: #4338ca; }
+        .badge-ds { background: #fff7ed; color: #9a3412; }
+
+        /* 详情/备注区 */
+        .detail { padding: 20px 24px 20px 64px; border-top: 1px solid #f1f5f9; }
+        .detail-strategy { background: #fcfdfe; }
+        .detail-performance { background: #f0fdf4; }
+        
+        .input-text { width: 100%; border: 1px solid var(--border); padding: 10px; border-radius: 8px; font-size: 14px; min-height: 80px; resize: vertical; margin-bottom: 12px; }
+        
+        .img-list { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+        .img-wrapper { position: relative; width: 120px; height: 120px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; cursor: zoom-in; }
+        .img-wrapper img { width: 100%; height: 100%; object-fit: cover; }
+        .img-remove { position: absolute; top: 4px; right: 4px; background: rgba(239, 68, 68, 0.8); color: #fff; border-radius: 50%; border: none; width: 18px; height: 18px; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; }
+
+        .drop-zone { border: 2px dashed #cbd5e1; border-radius: 10px; padding: 20px; text-align: center; color: var(--text-sub); cursor: pointer; background: #fff; font-size: 13px; flex: 1; min-width: 200px; }
+
+        .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999; display: flex; align-items: center; justify-content: center; cursor: zoom-out; }
+        .lightbox img { max-width: 90%; max-height: 90%; box-shadow: 0 0 20px rgba(0,0,0,0.5); border-radius: 4px; }
+
+        /* 底部操作 */
+        .footer { position: fixed; bottom: 0; left: 240px; right: 0; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); padding: 20px 40px; border-top: 1px solid var(--border); display: flex; gap: 16px; align-items: flex-end; }
+        .footer-input { border: 1px solid var(--border); padding: 10px; border-radius: 8px; font-size: 14px; }
+        .btn-main { background: var(--primary); color: #fff; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div id="app" style="display:contents">
+    <div v-if="previewUrl" class="lightbox" @click="previewUrl = null">
+        <img :src="previewUrl">
+    </div>
+
+    <div class="sidebar">
+        <div class="sidebar-header">素材投放周报系统</div>
+        <div class="week-list">
+            <div v-for="(week, index) in weeks" :key="week.id" class="week-item" :class="{active: currentWeekId === week.id}" @click="currentWeekId = week.id">
+                <span>{{ week.name }}</span>
+                <span @click.stop="removeWeek(index)" style="opacity:0.3">✕</span>
+            </div>
+        </div>
+        <button class="btn-add" @click="addNewWeek">+ 新增复盘周次</button>
+        <div style="padding: 16px; font-size: 10px; color: #475569; opacity: 0.6">数据自动保存至本地缓存</div>
+    </div>
+
+    <div class="main">
+        <div class="tabs">
+            <div class="tab" :class="{active: currentTab === 'strategy'}" @click="currentTab = 'strategy'">💡 策略脑暴池</div>
+            <div class="tab" :class="{active: currentTab === 'performance'}" @click="currentTab = 'performance'">🚀 消耗排行榜</div>
+        </div>
+
+        <div class="content" v-if="activeWeek">
+            <div v-show="currentTab === 'strategy'">
+                <div v-for="item in sortedOptions" :key="item.id" class="item-card">
+                    <div class="item-header">
+                        <div style="font-size:12px; color:#cbd5e1; font-weight:bold">{{ String(item.index).padStart(2,'0') }}</div>
+                        <div style="flex:1">
+                            <input class="title-input" v-model="item.title" placeholder="输入需求标题...">
+                            <div style="font-size:12px; color:var(--text-sub); cursor:pointer; margin-top:4px" @click="item.showNote = !item.showNote">
+                                {{ item.showNote ? '收起详情 ▲' : '点击编辑策略详情与图片 (' + (item.images ? item.images.length : 0) + ') ▼' }}
+                            </div>
+                        </div>
+                        <div class="vote-tag">
+                            <button class="vote-btn" @click="changeVote(item.id, -1)">-</button>
+                            <span class="vote-num">{{ item.votes }}</span>
+                            <button class="vote-btn" @click="changeVote(item.id, 1)">+</button>
+                        </div>
+                    </div>
+                    <div v-if="item.showNote" class="detail detail-strategy">
+                        <textarea class="input-text" v-model="item.note" placeholder="录入需求的核心逻辑..."></textarea>
+                        <div class="img-list">
+                            <div v-for="(src, idx) in item.images" :key="idx" class="img-wrapper" @click="previewUrl = src">
+                                <img :src="src">
+                                <button class="img-remove" @click.stop="item.images.splice(idx, 1)">✕</button>
+                            </div>
+                            <div class="drop-zone" @click="triggerUpload('st', item.id)" @paste="onPaste($event, 'st', item.id)">
+                                📸 点击或粘贴多图
+                                <input type="file" :id="'file-st-'+item.id" style="display:none" @change="handleFile($event, 'st', item.id)" multiple>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div v-show="currentTab === 'performance'">
+                <div v-for="ad in sortedAds" :key="ad.id" class="item-card">
+                    <div class="perf-grid" @click="ad.showNote = !ad.showNote">
+                        <div>
+                            <div style="margin-bottom:6px">
+                                <span v-for="a in ad.aps" :key="a" class="badge badge-ap">{{ a }}</span>
+                                <span class="badge badge-ds">{{ ad.ds }}</span>
+                            </div>
+                            <div style="font-weight:700; font-size:15px; color:var(--primary)">
+                                {{ getStrategyTitle(ad.strategyId) }}
+                                <small style="font-weight:normal; color:var(--text-sub); margin-left:8px; font-size:11px">
+                                    {{ ad.showNote ? '▲' : '▼ 详情' }} ({{ad.images ? ad.images.length : 0}})
+                                </small>
+                            </div>
+                        </div>
+                        <div @click.stop><div style="font-size:11px; color:var(--text-sub); margin-bottom:4px">消耗 ($)</div><input type="number" v-model.number="ad.spend" class="footer-input" style="padding:6px; width:80%"></div>
+                        <div @click.stop><div style="font-size:11px; color:var(--text-sub); margin-bottom:4px">单数</div><input type="number" v-model.number="ad.orders" class="footer-input" style="padding:6px; width:80%"></div>
+                        <div style="text-align:right">
+                            <div style="font-size:11px; color:var(--text-sub); margin-bottom:4px">CPA</div>
+                            <div style="font-weight:800; font-size:18px">${{ (ad.spend / (ad.orders || 1)).toFixed(2) }}</div>
+                        </div>
+                        <button @click.stop="removeAd(ad.id)" style="border:none; background:none; color:#ddd; cursor:pointer">✕</button>
+                    </div>
+                    <div v-if="ad.showNote" class="detail detail-performance">
+                        <textarea class="input-text" v-model="ad.analysis" placeholder="输入投放分析总结..."></textarea>
+                        <div class="img-list">
+                            <div v-for="(src, idx) in ad.images" :key="idx" class="img-wrapper" @click="previewUrl = src">
+                                <img :src="src">
+                                <button class="img-remove" @click.stop="ad.images.splice(idx, 1)">✕</button>
+                            </div>
+                            <div class="drop-zone" @click="triggerUpload('ad', ad.id)" @paste="onPaste($event, 'ad', ad.id)">
+                                📊 点击或粘贴截图
+                                <input type="file" :id="'file-ad-'+ad.id" style="display:none" @change="handleFile($event, 'ad', ad.id)" multiple>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer" v-if="activeWeek">
+            <template v-if="currentTab === 'strategy'">
+                <input v-model="userInput" @keyup.enter="handleCommand" placeholder="输入序号加票(如 1) 或 新增策略标题..." class="footer-input" style="flex:1">
+                <button class="btn-main" @click="handleCommand">提交需求</button>
+            </template>
+            <template v-if="currentTab === 'performance'">
+                <div style="display:flex; gap:12px; flex:1">
+                    <div style="background:#f1f5f9; padding:8px; border-radius:8px; display:grid; grid-template-columns: repeat(4, 1fr); gap:4px">
+                        <label v-for="n in apList" :key="n" style="font-size:11px; cursor:pointer">
+                            <input type="checkbox" :value="n" v-model="newAd.aps"> {{n}}
+                        </label>
+                    </div>
+                    <select v-model="newAd.ds" class="footer-input"><option v-for="n in dsList" :value="n">{{n}}</option></select>
+                    <select v-model="newAd.strategyId" class="footer-input" style="flex:1">
+                        <option value="">关联对应需求...</option>
+                        <option v-for="opt in activeWeek.strategyOptions" :key="opt.id" :value="opt.id">{{ opt.index }}. {{ opt.title }}</option>
+                    </select>
+                </div>
+                <button class="btn-main" @click="addAdCombo">确认上线</button>
+            </template>
+        </div>
+    </div>
+</div>
+
+<script>
+    const { createApp, ref, computed, watch } = Vue;
+    createApp({
+        setup() {
+            // 1. 数据持久化：从本地读取
+            const savedWeeks = localStorage.getItem('mbti_data');
+            const weeks = ref(savedWeeks ? JSON.parse(savedWeeks) : []);
+            
+            const currentTab = ref('strategy');
+            const currentWeekId = ref(weeks.value.length > 0 ? weeks.value[0].id : null);
+            const userInput = ref("");
+            const previewUrl = ref(null);
+            const apList = ["小熊", "AP", "JM", "QK", "Amy", "Emily", "LH"];
+            const dsList = ["Amy", "Emily", "LH"];
+            const newAd = ref({ aps: [], ds: "Amy", strategyId: "" });
+            const presetTitles = ["排名榜", "反应记录", "天赋测试", "KOL口播", "人格成长", "MBTI配对", "MBTI与疾病", "职业与收入", "社会关系"];
+
+            // 2. 核心：监听并自动保存
+            watch(weeks, (newVal) => {
+                localStorage.setItem('mbti_data', JSON.stringify(newVal));
+            }, { deep: true });
+
+            const addNewWeek = () => {
+                const name = prompt("复盘周次 (例如: 3月第4周):");
+                if(!name) return;
+                const id = Date.now();
+                weeks.value.push({
+                    id, name,
+                    strategyOptions: presetTitles.map((t, i) => ({ 
+                        id: 'st-'+id+i, index: i+1, title: t, votes: 0, note: "", images: [], showNote: false 
+                    })),
+                    performanceAds: []
+                });
+                currentWeekId.value = id;
+            };
+
+            const activeWeek = computed(() => weeks.value.find(w => w.id === currentWeekId.value));
+            const sortedOptions = computed(() => activeWeek.value ? [...activeWeek.value.strategyOptions].sort((a,b) => b.votes - a.votes) : []);
+            const sortedAds = computed(() => activeWeek.value ? [...activeWeek.value.performanceAds].sort((a,b) => b.spend - a.spend) : []);
+
+            const getStrategyTitle = (strategyId) => {
+                if (!activeWeek.value) return "";
+                const strategy = activeWeek.value.strategyOptions.find(o => o.id === strategyId);
+                return strategy ? strategy.title : "未知需求";
+            };
+
+            const handleCommand = () => {
+                const val = userInput.value.trim();
+                if(!val || !activeWeek.value) return;
+                const tokens = val.split(/\s+/);
+                let hit = false;
+                tokens.forEach(t => {
+                    const target = activeWeek.value.strategyOptions.find(o => o.index === parseInt(t));
+                    if(target) { target.votes++; hit = true; }
+                });
+                if(!hit) {
+                    activeWeek.value.strategyOptions.push({ 
+                        id: Date.now(), index: activeWeek.value.strategyOptions.length+1, 
+                        title: val, votes: 1, note: "", images: [], showNote: false 
+                    });
+                }
+                userInput.value = "";
+            };
+
+            const addAdCombo = () => {
+                if(!newAd.value.strategyId) return;
+                activeWeek.value.performanceAds.push({ 
+                    id: Date.now(), 
+                    aps: [...newAd.value.aps], 
+                    ds: newAd.value.ds, 
+                    strategyId: newAd.value.strategyId,
+                    spend: 0, orders: 0,
+                    analysis: "", images: [], showNote: false 
+                });
+                newAd.value.aps = [];
+            };
+
+            const triggerUpload = (type, id) => document.getElementById(`file-${type}-${id}`).click();
+            
+            const handleFile = (e, type, id) => {
+                const files = Array.from(e.target.files);
+                files.forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = (r) => {
+                        const list = type === 'st' ? activeWeek.value.strategyOptions : activeWeek.value.performanceAds;
+                        const item = list.find(o => o.id === id);
+                        if(item) {
+                            if(!item.images) item.images = [];
+                            item.images.push(r.target.result);
+                        }
+                    };
+                    reader.readAsDataURL(file);
+                });
+            };
+
+            const onPaste = (e, type, id) => {
+                const items = Array.from(e.clipboardData.items);
+                items.forEach(item => {
+                    if (item.type.indexOf('image') !== -1) {
+                        const reader = new FileReader();
+                        reader.onload = (r) => {
+                            const list = type === 'st' ? activeWeek.value.strategyOptions : activeWeek.value.performanceAds;
+                            const target = list.find(o => o.id === id);
+                            if(target) {
+                                if(!target.images) target.images = [];
+                                target.images.push(r.target.result);
+                            }
+                        };
+                        reader.readAsDataURL(item.getAsFile());
+                    }
+                });
+            };
+
+            return { 
+                currentTab, currentWeekId, weeks, activeWeek, addNewWeek, sortedOptions, sortedAds, getStrategyTitle,
+                handleCommand, addAdCombo, triggerUpload, handleFile, onPaste, previewUrl,
+                changeVote: (id, d) => { const t = activeWeek.value.strategyOptions.find(o => o.id === id); if(t) t.votes = Math.max(0, t.votes + d); },
+                removeWeek: (i) => { if(confirm("确定删除该周吗？")) weeks.value.splice(i, 1); },
+                removeAd: (id) => activeWeek.value.performanceAds = activeWeek.value.performanceAds.filter(a => a.id !== id),
+                userInput, apList, dsList, newAd 
+            };
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>
