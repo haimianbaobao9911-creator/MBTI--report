@@ -220,23 +220,26 @@
             const presetTitles = ["排名榜", "反应记录", "天赋测试", "KOL口播", "人格成长", "MBTI配对", "MBTI与疾病", "职业与收入", "社会关系"];
 
             const loadData = async () => {
-                syncText.value = "正在读取...";
-                const { data, error } = await supabaseClient.from('mbti_storage').select('content').eq('id', 1).single();
-                if (data) {
-                    weeks.value = data.content || [];
-                    if(weeks.value.length > 0) currentWeekId.value = weeks.value[0].id;
-                    syncText.value = "同步就绪";
-                } else {
-                    syncText.value = "初始化云端...";
-                    await supabaseClient.from('mbti_storage').insert([{ id: 1, content: [] }]);
-                }
-            };
+    syncText.value = "正在读取...";
+    const { data, error } = await supabaseClient.from('mbti_storage').select('content').eq('id', 1).single();
+    if (data && data.content) {
+        // 如果是文字，就把它转回对象；如果是空的，就给个空数组
+        weeks.value = typeof data.content === 'string' ? JSON.parse(data.content) : (data.content || []);
+        if(weeks.value.length > 0) currentWeekId.value = weeks.value[0].id;
+        syncText.value = "同步就绪";
+    } else {
+        syncText.value = "初始化云端...";
+        await supabaseClient.from('mbti_storage').insert([{ id: 1, content: "[]" }]);
+    }
+};
 
-            const saveData = async () => {
-                syncText.value = "正在保存...";
-                const { error } = await supabaseClient.from('mbti_storage').update({ content: JSON.parse(JSON.stringify(weeks.value)) }).eq('id', 1);
-                syncText.value = error ? "保存失败!" : "云端已保存 " + new Date().toLocaleTimeString();
-            };
+           const saveData = async () => {
+    syncText.value = "正在保存...";
+    // 关键：在这里强制把数据转成一串文字 (String) 再存，多大图片都能塞进去
+    const contentStr = JSON.stringify(JSON.parse(JSON.stringify(weeks.value)));
+    const { error } = await supabaseClient.from('mbti_storage').update({ content: contentStr }).eq('id', 1);
+    syncText.value = error ? "保存失败!" : "云端已保存 " + new Date().toLocaleTimeString();
+};
 
             onMounted(() => { loadData(); });
 
