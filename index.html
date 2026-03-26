@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>MBTI 投放复盘云端工作台 Pro</title>
+    <title>MBTI 投放复盘云端工作台 Pro - 拖拽上传版</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
@@ -11,7 +11,7 @@
             --sidebar: #0f172a; --text-main: #1e293b; --text-sub: #64748b;
             --border: #e2e8f0; --accent: #10b981; --warn: #f59e0b;
         }
-        body { font-family: "PingFang SC", sans-serif; background: var(--bg); margin: 0; display: flex; height: 100vh; color: var(--text-main); }
+        body { font-family: "PingFang SC", sans-serif; background: var(--bg); margin: 0; display: flex; height: 100vh; color: var(--text-main); overflow: hidden; }
 
         /* 侧边栏 */
         .sidebar { width: 240px; background: var(--sidebar); color: #fff; display: flex; flex-direction: column; flex-shrink: 0; }
@@ -53,7 +53,10 @@
         .img-wrapper img { width: 100%; height: 100%; object-fit: cover; }
         .img-remove { position: absolute; top: 4px; right: 4px; background: rgba(239, 68, 68, 0.8); color: #fff; border-radius: 50%; border: none; width: 18px; height: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 10px; }
 
-        .drop-zone { border: 2px dashed #cbd5e1; border-radius: 10px; padding: 20px; text-align: center; color: var(--text-sub); cursor: pointer; background: #fff; font-size: 12px; flex: 1; min-width: 150px; }
+        /* 增强的 Drop Zone 样式 */
+        .drop-zone { border: 2px dashed #cbd5e1; border-radius: 10px; padding: 20px; text-align: center; color: var(--text-sub); cursor: pointer; background: #fff; font-size: 12px; flex: 1; min-width: 150px; transition: 0.3s; position: relative; }
+        .drop-zone:hover, .drop-zone.dragging { border-color: var(--primary); background: #eef2ff; color: var(--primary); }
+        .drop-zone.dragging::after { content: '释放鼠标上传'; position: absolute; inset: 0; background: rgba(99, 102, 241, 0.9); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; border-radius: 8px; }
 
         .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999; display: flex; align-items: center; justify-content: center; cursor: zoom-out; }
         .lightbox img { max-width: 90%; max-height: 90%; border-radius: 4px; }
@@ -112,8 +115,14 @@
                                 <img :src="src">
                                 <button class="img-remove" @click.stop="item.images.splice(idx, 1); saveData()">✕</button>
                             </div>
-                            <div class="drop-zone" @click="triggerUpload('st', item.id)" @paste="onPaste($event, 'st', item.id)">
-                                📸 点击或粘贴多图
+                            <div class="drop-zone" 
+                                 :class="{ dragging: dragOverId === 'st'+item.id }"
+                                 @click="triggerUpload('st', item.id)" 
+                                 @paste="onPaste($event, 'st', item.id)"
+                                 @dragover.prevent="onDragOver('st', item.id)"
+                                 @dragleave="onDragLeave"
+                                 @drop.prevent="onDrop($event, 'st', item.id)">
+                                📸 点击、粘贴或拖拽多图
                                 <input type="file" :id="'file-st-'+item.id" style="display:none" @change="handleFile($event, 'st', item.id)" multiple>
                             </div>
                         </div>
@@ -138,10 +147,7 @@
                         </div>
                         <div @click.stop><div style="font-size:11px; color:var(--text-sub); margin-bottom:4px">消耗 ($)</div><input type="number" v-model.number="ad.spend" @change="saveData" class="footer-input" style="padding:6px; width:80%"></div>
                         <div @click.stop><div style="font-size:11px; color:var(--text-sub); margin-bottom:4px">单数</div><input type="number" v-model.number="ad.orders" @change="saveData" class="footer-input" style="padding:6px; width:80%"></div>
-                        <div style="text-align:right">
-                            <div style="font-size:11px; color:var(--text-sub); margin-bottom:4px">CPA</div>
-                            <div style="font-weight:800; font-size:18px">${{ (ad.spend / (ad.orders || 1)).toFixed(2) }}</div>
-                        </div>
+                        <div style="text-align:right"><div style="font-size:11px; color:var(--text-sub); margin-bottom:4px">CPA</div><div style="font-weight:800; font-size:18px">${{ (ad.spend / (ad.orders || 1)).toFixed(2) }}</div></div>
                         <button @click.stop="removeAd(ad.id)" style="border:none; background:none; color:#ddd; cursor:pointer">✕</button>
                     </div>
                     <div v-if="ad.showNote" class="detail">
@@ -151,8 +157,14 @@
                                 <img :src="src">
                                 <button class="img-remove" @click.stop="ad.images.splice(idx, 1); saveData()">✕</button>
                             </div>
-                            <div class="drop-zone" @click="triggerUpload('ad', ad.id)" @paste="onPaste($event, 'ad', ad.id)">
-                                📊 点击或粘贴截图
+                            <div class="drop-zone" 
+                                 :class="{ dragging: dragOverId === 'ad'+ad.id }"
+                                 @click="triggerUpload('ad', ad.id)" 
+                                 @paste="onPaste($event, 'ad', ad.id)"
+                                 @dragover.prevent="onDragOver('ad', ad.id)"
+                                 @dragleave="onDragLeave"
+                                 @drop.prevent="onDrop($event, 'ad', ad.id)">
+                                📊 点击、粘贴或拖拽截图
                                 <input type="file" :id="'file-ad-'+ad.id" style="display:none" @change="handleFile($event, 'ad', ad.id)" multiple>
                             </div>
                         </div>
@@ -201,12 +213,12 @@
             const syncText = ref("正在同步云端...");
             const userInput = ref("");
             const previewUrl = ref(null);
+            const dragOverId = ref(null); // 记录当前正拖拽经过的 Drop Zone ID
             const apList = ["小熊", "AP", "JM", "QK", "Amy", "Emily", "LH"];
             const dsList = ["Amy", "Emily", "LH"];
             const newAd = ref({ aps: [], ds: "Amy", strategyId: "" });
             const presetTitles = ["排名榜", "反应记录", "天赋测试", "KOL口播", "人格成长", "MBTI配对", "MBTI与疾病", "职业与收入", "社会关系"];
 
-            // 1. 读取数据
             const loadData = async () => {
                 syncText.value = "正在读取...";
                 const { data, error } = await supabaseClient.from('mbti_storage').select('content').eq('id', 1).single();
@@ -220,7 +232,6 @@
                 }
             };
 
-            // 2. 保存数据 (由修改触发)
             const saveData = async () => {
                 syncText.value = "正在保存...";
                 const { error } = await supabaseClient.from('mbti_storage').update({ content: JSON.parse(JSON.stringify(weeks.value)) }).eq('id', 1);
@@ -265,8 +276,11 @@
                 saveData();
             };
 
+            // 处理图片的通用核心函数
             const processImages = (files, type, id) => {
                 files.forEach(file => {
+                    // 只处理图片文件
+                    if (file.type.indexOf('image') === -1) return;
                     const reader = new FileReader();
                     reader.onload = (r) => {
                         const list = type === 'st' ? activeWeek.value.strategyOptions : activeWeek.value.performanceAds;
@@ -279,13 +293,23 @@
 
             return { 
                 weeks, currentWeekId, currentTab, syncText, activeWeek, sortedOptions, sortedAds, getStrategyTitle,
-                addNewWeek, handleCommand, addAdCombo, saveData, previewUrl, apList, dsList, newAd, userInput,
+                addNewWeek, handleCommand, addAdCombo, saveData, previewUrl, apList, dsList, newAd, userInput, dragOverId,
                 changeVote: (id, d) => { const t = activeWeek.value.strategyOptions.find(o => o.id === id); if(t) { t.votes = Math.max(0, t.votes + d); saveData(); } },
                 removeWeek: (i) => { if(confirm("确定删除？")) { weeks.value.splice(i, 1); saveData(); } },
                 removeAd: (id) => { activeWeek.value.performanceAds = activeWeek.value.performanceAds.filter(a => a.id !== id); saveData(); },
                 triggerUpload: (type, id) => document.getElementById(`file-${type}-${id}`).click(),
+                // 1. 处理点击上传的文件
                 handleFile: (e, type, id) => processImages(Array.from(e.target.files), type, id),
-                onPaste: (e, type, id) => processImages(Array.from(e.clipboardData.items).filter(i => i.type.indexOf('image')!==-1).map(i => i.getAsFile()), type, id)
+                // 2. 处理粘贴的图片
+                onPaste: (e, type, id) => processImages(Array.from(e.clipboardData.items).filter(i => i.type.indexOf('image')!==-1).map(i => i.getAsFile()), type, id),
+                // 3. 处理拖拽相关的逻辑
+                onDragOver: (type, id) => { dragOverId.value = type + id; }, // 鼠标拖着东西经过时变色
+                onDragLeave: () => { dragOverId.value = null; }, // 鼠标离开时恢复
+                onDrop: (e, type, id) => { // 鼠标释放时上传
+                    dragOverId.value = null;
+                    const files = Array.from(e.dataTransfer.files);
+                    processImages(files, type, id);
+                }
             };
         }
     }).mount('#app');
