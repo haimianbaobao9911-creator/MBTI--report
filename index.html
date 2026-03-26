@@ -2,83 +2,101 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>MBTI 投放复盘云端工作台 (Supabase 版)</title>
+    <title>MBTI 投放复盘云端工作台 Pro</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
-        /* 这里保留你之前的 CSS 样式，由于字数限制我略写，请确保复制你之前的完整 style */
-        :root { --primary: #6366f1; --bg: #f8fafc; --sidebar: #0f172a; }
-        body { font-family: "PingFang SC", sans-serif; background: var(--bg); margin: 0; display: flex; height: 100vh; }
-        .sidebar { width: 240px; background: var(--sidebar); color: #fff; display: flex; flex-direction: column; }
+        :root { --primary: #6366f1; --bg: #f8fafc; --sidebar: #0f172a; --border: #e2e8f0; --text-sub: #94a3b8; }
+        body { font-family: "PingFang SC", sans-serif; background: var(--bg); margin: 0; display: flex; height: 100vh; color: #1e293b; }
+        .sidebar { width: 240px; background: var(--sidebar); color: #fff; display: flex; flex-direction: column; flex-shrink: 0; }
         .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
         .content { flex: 1; padding: 32px; overflow-y: auto; }
-        .sync-status { padding: 10px; font-size: 12px; border-top: 1px solid #334155; }
-        /* ... 其他样式建议保持和你之前的 index.html 一致 ... */
+        .sync-status { padding: 12px; font-size: 12px; border-top: 1px solid #1e293b; color: #10b981; }
+        .week-item { padding: 12px; cursor: pointer; color: var(--text-sub); border-radius: 8px; margin-bottom: 4px; transition: 0.2s; }
+        .week-item.active { background: var(--primary); color: #fff; }
+        .btn-add { width: 100%; padding: 10px; background: transparent; border: 1px dashed #475569; color: var(--text-sub); border-radius: 8px; cursor: pointer; }
     </style>
 </head>
 <body>
 <div id="app" style="display:contents">
     <div class="sidebar">
-        <div style="padding:24px; font-weight:800; color:var(--primary)">MBTI 云端工作台</div>
-        <div style="flex:1; padding:12px">
-            <div v-for="w in weeks" :key="w.id" @click="currentWeekId = w.id" style="padding:10px; cursor:pointer" :style="{color: currentWeekId===w.id?'#fff':'#94a3b8'}">{{w.name}}</div>
-            <button @click="addNewWeek" style="width:100%; margin-top:10px">+ 新增周次</button>
+        <div style="padding:24px; font-weight:800; color:var(--primary); font-size:18px">MBTI 云端工作台</div>
+        <div style="flex:1; padding:12px; overflow-y:auto">
+            <div v-for="w in weeks" :key="w.id" @click="currentWeekId = w.id" class="week-item" :class="{active: currentWeekId === w.id}">
+                {{ w.name }}
+            </div>
+            <button @click="addNewWeek" class="btn-add">+ 新增复盘周次</button>
         </div>
-        <div class="sync-status">状态: {{ syncText }}</div>
+        <div class="sync-status">● {{ syncText }}</div>
     </div>
     <div class="main">
         <div class="content" v-if="activeWeek">
-            <h2>{{ activeWeek.name }} - 请开始录入数据</h2>
-            <button @click="saveData" class="btn-main">手动强制同步</button>
+            <h2 style="margin-top:0">{{ activeWeek.name }} - 数据已同步</h2>
+            <div style="background:#fff; padding:40px; border-radius:12px; border:1px solid var(--border); text-align:center">
+                <p>恭喜 Polly！如果看到这句话，说明 Vue 已经成功运行了。</p>
+                <button @click="saveData" style="background:var(--primary); color:#fff; border:none; padding:10px 20px; border-radius:8px; cursor:pointer">
+                    点我手动测试同步
+                </button>
+            </div>
+        </div>
+        <div v-else style="padding:100px; text-align:center; color:var(--text-sub)">
+            <h3>欢迎使用云端协作版</h3>
+            <p>点击左侧“新增周次”开始录入你的第一条数据</p>
         </div>
     </div>
 </div>
 
 <script>
-    // --- 配置区：填入你的 Supabase 信息 ---
-    const SB_URL = "https://ovmlyyrqlvmsnygjoqho.supabase.co";
+    // ======= 核心：在这里填入你的钥匙 =======
+    const SB_URL = "https://ovmlyyrqlvmsnygjoqho.supabase.co"; 
     const SB_KEY = "sb_publishable_nUlc9VshPKcH8gvceg879g_430uz18c";
-    const supabase = Supabase.createClient(SB_URL, SB_KEY);
-    // ------------------------------------
+    // =====================================
 
+    // 修复新手容易遇到的导入问题
     const { createApp, ref, computed, watch, onMounted } = Vue;
+    const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
+
     createApp({
         setup() {
             const weeks = ref([]);
             const currentWeekId = ref(null);
-            const syncText = ref("同步中...");
+            const syncText = ref("正在连接云端...");
 
-            // 从云端读取数据
             const loadData = async () => {
-                const { data, error } = await supabase.from('mbti_storage').select('content').eq('id', 1).single();
-                if (data) {
-                    weeks.value = data.content || [];
-                    if(weeks.value.length > 0) currentWeekId.value = weeks.value[0].id;
-                    syncText.value = "云端已就绪";
-                } else if (error) {
-                    syncText.value = "初始化云端...";
-                    await supabase.from('mbti_storage').insert([{ id: 1, content: [] }]);
+                try {
+                    const { data, error } = await supabaseClient.from('mbti_storage').select('content').eq('id', 1).single();
+                    if (data) {
+                        weeks.value = data.content || [];
+                        if(weeks.value.length > 0) currentWeekId.value = weeks.value[0].id;
+                        syncText.value = "云端同步已就绪";
+                    } else {
+                        syncText.value = "初始化云端中...";
+                        await supabaseClient.from('mbti_storage').insert([{ id: 1, content: [] }]);
+                    }
+                } catch (e) {
+                    syncText.value = "连接失败，请检查URL和Key";
                 }
             };
 
-            // 保存数据
             const saveData = async () => {
-                syncText.value = "同步中...";
-                const { error } = await supabase.from('mbti_storage').update({ content: weeks.value }).eq('id', 1);
-                syncText.value = error ? "保存失败" : "已同步 " + new Date().toLocaleTimeString();
+                syncText.value = "正在自动保存...";
+                const { error } = await supabaseClient.from('mbti_storage').update({ content: JSON.parse(JSON.stringify(weeks.value)) }).eq('id', 1);
+                syncText.value = error ? "保存失败!" : "云端已保存 " + new Date().toLocaleTimeString();
             };
 
-            // 监听变化自动保存
-            watch(weeks, () => saveData(), { deep: true });
-
-            onMounted(() => loadData());
+            watch(weeks, () => { saveData(); }, { deep: true });
+            onMounted(() => { loadData(); });
 
             return { 
                 weeks, currentWeekId, syncText, saveData,
                 activeWeek: computed(() => weeks.value.find(w => w.id === currentWeekId.value)),
-                addNewWeek: () => { 
-                    const n = prompt("周次名:"); 
-                    if(n) { weeks.value.push({id: Date.now(), name: n, strategyOptions: [], performanceAds: []}); } 
+                addNewWeek: () => {
+                    const name = prompt("请输入复盘周次名称:");
+                    if(name) {
+                        const id = Date.now();
+                        weeks.value.push({ id, name, strategyOptions: [], performanceAds: [] });
+                        currentWeekId.value = id;
+                    }
                 }
             };
         }
