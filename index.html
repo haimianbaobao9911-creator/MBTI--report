@@ -2,63 +2,50 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>MBTI 投放复盘云端工作台 Pro - 最终版</title>
+    <title>MBTI 投放复盘云端工作台 Pro - 最终完美版</title>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <style>
-        :root {
-            --primary: #6366f1; --bg: #f8fafc; --card: #ffffff;
-            --sidebar: #0f172a; --text-main: #1e293b; --text-sub: #64748b;
-            --border: #e2e8f0; --accent: #10b981;
-        }
-        body { font-family: "PingFang SC", sans-serif; background: var(--bg); margin: 0; display: flex; height: 100vh; color: var(--text-main); overflow: hidden; }
-
+        :root { --primary: #6366f1; --bg: #f8fafc; --sidebar: #0f172a; --border: #e2e8f0; --text-sub: #64748b; }
+        body { font-family: "PingFang SC", sans-serif; background: var(--bg); margin: 0; display: flex; height: 100vh; color: #1e293b; overflow: hidden; }
         /* 侧边栏 */
         .sidebar { width: 240px; background: var(--sidebar); color: #fff; display: flex; flex-direction: column; flex-shrink: 0; }
         .sidebar-header { padding: 24px; font-size: 16px; font-weight: 800; color: var(--primary); border-bottom: 1px solid #1e293b; }
         .week-list { flex: 1; overflow-y: auto; padding: 12px; }
-        .week-item { padding: 12px 16px; margin-bottom: 6px; cursor: pointer; border-radius: 8px; font-size: 14px; display: flex; justify-content: space-between; transition: 0.2s; color: #94a3b8; }
+        .week-item { padding: 12px 16px; margin-bottom: 6px; cursor: pointer; border-radius: 8px; font-size: 14px; color: #94a3b8; display: flex; justify-content: space-between; transition: 0.2s; }
         .week-item.active { background: var(--primary); color: #fff; font-weight: 600; }
         .btn-add { margin: 16px; padding: 10px; border: 1px dashed #334155; background: transparent; color: #94a3b8; border-radius: 8px; cursor: pointer; }
         .sync-status { padding: 12px; font-size: 11px; border-top: 1px solid #1e293b; color: #10b981; }
-
         /* 内容区 */
         .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
         .tabs { background: #fff; padding: 0 40px; display: flex; gap: 40px; border-bottom: 1px solid var(--border); height: 64px; align-items: center; }
         .tab { height: 100%; display: flex; align-items: center; cursor: pointer; color: var(--text-sub); border-bottom: 2px solid transparent; transition: 0.2s; font-size: 15px; }
         .tab.active { color: var(--primary); border-color: var(--primary); font-weight: 600; }
-
         .content { flex: 1; padding: 32px; overflow-y: auto; padding-bottom: 150px; }
         .item-card { background: #fff; border: 1px solid var(--border); border-radius: 12px; margin-bottom: 12px; overflow: hidden; }
-        .item-header { display: flex; align-items: center; gap: 16px; padding: 16px 24px; background: #fff; }
-        
+        .item-header { display: flex; align-items: center; gap: 16px; padding: 16px 24px; }
         .index-badge { font-family: monospace; font-size: 14px; color: #cbd5e1; font-weight: 800; min-width: 24px; }
-        .title-input { border: 1px solid transparent; font-size: 16px; font-weight: 600; width: 100%; padding: 4px; outline: none; border-radius: 4px; }
-        .title-input:hover { border-color: var(--border); background: #f9fafb; }
-        .title-input:focus { border-color: var(--primary); background: #fff; }
-
+        .title-input { border: 1px solid transparent; font-size: 16px; font-weight: 600; width: 100%; padding: 4px; outline: none; }
         .vote-tag { background: #f1f5f9; border-radius: 6px; display: flex; align-items: center; padding: 4px; gap: 8px; }
         .vote-btn { width: 24px; height: 24px; background: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
         .vote-num { color: var(--primary); font-weight: 800; min-width: 24px; text-align: center; }
-
+        /* 排行榜网格 */
+        .perf-grid { display: grid; grid-template-columns: 2.5fr 1fr 1fr 120px 40px; gap: 20px; align-items: center; padding: 16px 24px; cursor: pointer; }
+        .badge { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px; margin-right: 4px; }
         .detail { padding: 20px 24px 20px 64px; border-top: 1px solid #f1f5f9; background: #fcfdfe; }
-        .input-text { width: 100%; border: 1px solid var(--border); padding: 10px; border-radius: 8px; font-size: 14px; min-height: 80px; resize: vertical; margin-bottom: 12px; outline: none; }
-        
+        /* 图片展示 */
         .img-list { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
-        .img-wrapper { position: relative; width: 100px; height: 100px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; cursor: zoom-in; }
+        .img-wrapper { position: relative; width: 100px; height: 100px; border-radius: 8px; border: 1px solid var(--border); overflow: hidden; cursor: zoom-in; }
         .img-wrapper img { width: 100%; height: 100%; object-fit: cover; }
-        .img-remove { position: absolute; top: 4px; right: 4px; background: rgba(239,68,68,0.8); color: #fff; border-radius: 50%; border: none; width: 18px; height: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 10px; }
-
-        .drop-zone { border: 2px dashed #cbd5e1; border-radius: 10px; padding: 20px; text-align: center; color: var(--text-sub); cursor: pointer; background: #fff; font-size: 12px; flex: 1; min-width: 150px; transition: 0.3s; position: relative; }
-        .drop-zone:hover, .drop-zone.dragging { border-color: var(--primary); background: #eef2ff; color: var(--primary); }
-        .drop-zone.dragging::after { content: '释放鼠标上传'; position: absolute; inset: 0; background: rgba(99, 102, 241, 0.9); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; border-radius: 8px; }
-
-        .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999; display: flex; align-items: center; justify-content: center; cursor: zoom-out; }
-        .lightbox img { max-width: 90%; max-height: 90%; border-radius: 4px; }
-
+        .img-remove { position: absolute; top: 4px; right: 4px; background: rgba(239,68,68,0.8); color: #fff; border-radius: 50%; border: none; width: 18px; height: 18px; cursor: pointer; font-size: 10px; display: flex; align-items: center; justify-content: center; }
+        .drop-zone { border: 2px dashed #cbd5e1; border-radius: 10px; padding: 20px; text-align: center; color: var(--text-sub); cursor: pointer; background: #fff; font-size: 12px; flex: 1; min-width: 150px; transition: 0.3s; }
+        .drop-zone.dragging { border-color: var(--primary); background: #eef2ff; }
+        /* 底部 */
         .footer { position: fixed; bottom: 0; left: 240px; right: 0; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); padding: 20px 40px; border-top: 1px solid var(--border); display: flex; gap: 16px; align-items: flex-end; }
         .footer-input { border: 1px solid var(--border); padding: 10px; border-radius: 8px; font-size: 14px; outline: none; }
         .btn-main { background: var(--primary); color: #fff; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+        .lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 9999; display: flex; align-items: center; justify-content: center; cursor: zoom-out; }
+        .lightbox img { max-width: 90%; max-height: 90%; border-radius: 4px; }
     </style>
 </head>
 <body>
@@ -80,8 +67,8 @@
 
     <div class="main">
         <div class="tabs">
-            <div class="tab" :class="{active: currentTab === 'strategy'}" @click="currentTab = 'strategy'">💡 策略脑暴池</div>
-            <div class="tab" :class="{active: currentTab === 'performance'}" @click="currentTab = 'performance'">🚀 消耗排行榜</div>
+            <div class="tab" :class="{active: currentTab === 'strategy'}" @click="currentTab = 'strategy'">💡 策略池</div>
+            <div class="tab" :class="{active: currentTab === 'performance'}" @click="currentTab = 'performance'">🚀 消耗榜</div>
         </div>
 
         <div class="content" v-if="activeWeek">
@@ -90,9 +77,9 @@
                     <div class="item-header">
                         <div class="index-badge">{{ String(item.index).padStart(2,'0') }}</div>
                         <div style="flex:1">
-                            <input class="title-input" v-model="item.title" @change="saveData" placeholder="输入需求标题...">
-                            <div style="font-size:12px; color:var(--text-sub); cursor:pointer; margin-top:4px" @click="item.showNote = !item.showNote">
-                                {{ item.showNote ? '收起详情 ▲' : '查看/编辑图片 (' + (item.images?.length || 0) + ') ▼' }}
+                            <input class="title-input" v-model="item.title" @change="saveData">
+                            <div style="font-size:12px; color:var(--text-sub); cursor:pointer" @click="item.showNote = !item.showNote">
+                                {{ item.showNote ? '收起详情 ▲' : '详情/图片 (' + (item.images?.length || 0) + ') ▼' }}
                             </div>
                         </div>
                         <div class="vote-tag">
@@ -102,14 +89,13 @@
                         </div>
                     </div>
                     <div v-if="item.showNote" class="detail">
-                        <textarea class="input-text" v-model="item.note" @change="saveData" placeholder="录入需求的核心逻辑..."></textarea>
+                        <textarea class="footer-input" style="width:100%; height:60px; margin-bottom:10px" v-model="item.note" @change="saveData" placeholder="核心描述..."></textarea>
                         <div class="img-list">
                             <div v-for="(src, idx) in item.images" :key="idx" class="img-wrapper" @click="previewUrl = src">
-                                <img :src="src">
-                                <button class="img-remove" @click.stop="item.images.splice(idx, 1); saveData()">✕</button>
+                                <img :src="src"><button class="img-remove" @click.stop="item.images.splice(idx,1);saveData()">✕</button>
                             </div>
-                            <div class="drop-zone" :class="{ dragging: dragOverId === 'st'+item.id }" @click="triggerUpload('st', item.id)" @paste="onPaste($event, 'st', item.id)" @dragover.prevent="dragOverId = 'st'+item.id" @dragleave="dragOverId = null" @drop.prevent="onDrop($event, 'st', item.id)">
-                                📸 点击、粘贴或拖拽图片
+                            <div class="drop-zone" :class="{dragging: dragOverId==='st'+item.id}" @click="triggerUpload('st', item.id)" @paste="onPaste($event, 'st', item.id)" @dragover.prevent="dragOverId='st'+item.id" @dragleave="dragOverId=null" @drop.prevent="onDrop($event, 'st', item.id)">
+                                📸 拖拽/粘贴图 (云端加速)
                                 <input type="file" :id="'file-st-'+item.id" style="display:none" @change="handleFile($event, 'st', item.id)" multiple>
                             </div>
                         </div>
@@ -118,114 +104,146 @@
             </div>
 
             <div v-show="currentTab === 'performance'">
-                <p style="padding:20px; color:var(--text-sub)">正在加载消耗模块功能...</p>
+                <div v-for="ad in sortedAds" :key="ad.id" class="item-card">
+                    <div class="perf-grid" @click="ad.showNote = !ad.showNote">
+                        <div>
+                            <div style="margin-bottom:4px">
+                                <span v-for="a in ad.aps" class="badge" style="background:#eef2ff;color:#4338ca">{{a}}</span>
+                                <span class="badge" style="background:#fff7ed;color:#9a3412">{{ad.ds}}</span>
+                            </div>
+                            <div style="font-weight:700; color:var(--primary)">{{ getStrategyTitle(ad.strategyId) }}</div>
+                        </div>
+                        <div @click.stop><small>消耗</small><br><input type="number" v-model.number="ad.spend" @change="saveData" class="footer-input" style="width:70px;padding:4px"></div>
+                        <div @click.stop><small>单数</small><br><input type="number" v-model.number="ad.orders" @change="saveData" class="footer-input" style="width:70px;padding:4px"></div>
+                        <div style="text-align:right"><small>CPA</small><br><strong>${{(ad.spend/(ad.orders||1)).toFixed(2)}}</strong></div>
+                        <button @click.stop="removeAd(ad.id)" style="border:none;background:none;color:#ddd;cursor:pointer">✕</button>
+                    </div>
+                    <div v-if="ad.showNote" class="detail" style="background:#f0fdf4">
+                        <textarea class="footer-input" style="width:100%; height:60px; margin-bottom:10px" v-model="ad.analysis" @change="saveData" placeholder="投放分析..."></textarea>
+                        <div class="img-list">
+                            <div v-for="(src, idx) in ad.images" :key="idx" class="img-wrapper" @click="previewUrl = src">
+                                <img :src="src"><button class="img-remove" @click.stop="ad.images.splice(idx,1);saveData()">✕</button>
+                            </div>
+                            <div class="drop-zone" @click="triggerUpload('ad', ad.id)" @paste="onPaste($event, 'ad', ad.id)" @dragover.prevent @drop.prevent="onDrop($event, 'ad', ad.id)">
+                                📊 粘贴/拖拽截图
+                                <input type="file" :id="'file-ad-'+ad.id" style="display:none" @change="handleFile($event, 'ad', ad.id)" multiple>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
         <div class="footer" v-if="activeWeek">
             <template v-if="currentTab === 'strategy'">
-                <input v-model="userInput" @keyup.enter="handleCommand" placeholder="输入序号加票或新策略标题..." class="footer-input" style="flex:1">
+                <input v-model="userInput" @keyup.enter="handleCommand" placeholder="输入序号加票或新策略..." class="footer-input" style="flex:1">
                 <button class="btn-main" @click="handleCommand">提交需求</button>
+            </template>
+            <template v-if="currentTab === 'performance'">
+                <div style="display:flex; gap:12px; flex:1">
+                    <div style="background:#f1f5f9; padding:8px; border-radius:8px; display:grid; grid-template-columns: repeat(4, 1fr); gap:4px">
+                        <label v-for="n in apList" :key="n" style="font-size:11px; cursor:pointer"><input type="checkbox" :value="n" v-model="newAd.aps"> {{n}}</label>
+                    </div>
+                    <select v-model="newAd.ds" class="footer-input"><option v-for="n in dsList" :value="n">{{n}}</option></select>
+                    <select v-model="newAd.strategyId" class="footer-input" style="flex:1">
+                        <option value="">关联对应需求...</option>
+                        <option v-for="opt in activeWeek.strategyOptions" :key="opt.id" :value="opt.id">{{opt.index}}. {{opt.title}}</option>
+                    </select>
+                </div>
+                <button class="btn-main" @click="addAdCombo">确认上线</button>
             </template>
         </div>
     </div>
 </div>
 
 <script>
-    // ======= 核心：在这里填入你的钥匙 =======
+    // ======= 核心配置 (请确保填入正确的钥匙) =======
     const SB_URL = "https://ovmlyyrqlvmsnygjoqho.supabase.co"; 
     const SB_KEY = "sb_publishable_nUlc9VshPKcH8gvceg879g_430uz18c";
     const supabaseClient = supabase.createClient(SB_URL, SB_KEY);
-    // =====================================
+    // ===========================================
 
-    const { createApp, ref, computed, watch, onMounted } = Vue;
+    const { createApp, ref, computed, onMounted } = Vue;
     createApp({
         setup() {
-            const weeks = ref([]);
-            const currentWeekId = ref(null);
-            const currentTab = ref('strategy');
-            const syncText = ref("同步就绪");
-            const userInput = ref("");
-            const previewUrl = ref(null);
-            const dragOverId = ref(null);
+            const weeks = ref([]), currentWeekId = ref(null), currentTab = ref('strategy'), syncText = ref("同步中"), userInput = ref(""), previewUrl = ref(null), dragOverId = ref(null);
+            const apList = ["小熊", "AP", "JM", "QK", "Amy", "Emily", "LH"], dsList = ["Amy", "Emily", "LH"];
+            const newAd = ref({ aps: ["AP"], ds: "Emily", strategyId: "" });
             const presetTitles = ["排名榜", "反应记录", "天赋测试", "KOL口播", "人格成长", "MBTI配对", "MBTI与疾病", "职业与收入", "社会关系"];
 
-            // 自动压缩
-            const compressImg = (base64) => new Promise(res => {
-                const img = new Image(); img.src = base64;
-                img.onload = () => {
-                    const canvas = document.createElement('canvas');
-                    let w = img.width, h = img.height;
-                    if (w > 1000 || h > 1000) { if (w > h) { h *= 1000/w; w = 1000; } else { w *= 1000/h; h = 1000; } }
-                    canvas.width = w; canvas.height = h;
-                    canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                    res(canvas.toDataURL('image/jpeg', 0.7));
-                };
-            });
-
-            // 读取
+            // 1. 读取
             const loadData = async () => {
                 const { data } = await supabaseClient.from('mbti_storage').select('content').eq('id', 1).single();
                 if (data && data.content) {
                     weeks.value = typeof data.content === 'string' ? JSON.parse(data.content) : data.content;
                     if(weeks.value.length > 0) currentWeekId.value = weeks.value[0].id;
                 }
+                syncText.value = "同步就绪";
             };
 
-            // 保存 (1秒防抖)
+            // 2. 保存 (1秒防抖)
             let timer = null;
             const saveData = () => {
-                syncText.value = "保存中...";
-                clearTimeout(timer);
+                syncText.value = "同步中..."; clearTimeout(timer);
                 timer = setTimeout(async () => {
                     const str = JSON.stringify(JSON.parse(JSON.stringify(weeks.value)));
-                    const { error } = await supabaseClient.from('mbti_storage').update({ content: str }).eq('id', 1);
-                    syncText.value = error ? "保存失败" : "已同步 " + new Date().toLocaleTimeString();
+                    await supabaseClient.from('mbti_storage').update({ content: str }).eq('id', 1);
+                    syncText.value = "已同步 " + new Date().toLocaleTimeString();
                 }, 1000);
+            };
+
+            // 3. 云端传图核心 (Storage)
+            const uploadToCloud = async (file) => {
+                const fileName = `${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+                const { data, error } = await supabaseClient.storage.from('mbti_images').upload(fileName, file);
+                if (error) return null;
+                const { data: { publicUrl } } = supabaseClient.storage.from('mbti_images').getPublicUrl(fileName);
+                return publicUrl;
+            };
+
+            const processImages = async (files, type, id) => {
+                syncText.value = "图片上传云端中...";
+                const list = type === 'st' ? activeWeek.value.strategyOptions : activeWeek.value.performanceAds;
+                const item = list.find(o => o.id === id);
+                for (let file of files) {
+                    if (file.type.indexOf('image') === -1) continue;
+                    const url = await uploadToCloud(file);
+                    if(url) { if(!item.images) item.images = []; item.images.push(url); }
+                }
+                saveData();
             };
 
             onMounted(() => loadData());
             const activeWeek = computed(() => weeks.value.find(w => w.id === currentWeekId.value));
 
-            const processImages = async (files, type, id) => {
-                for (let file of files) {
-                    if (file.type.indexOf('image') === -1) continue;
-                    const reader = new FileReader();
-                    reader.onload = async (r) => {
-                        const compressed = await compressImg(r.target.result);
-                        const item = activeWeek.value.strategyOptions.find(o => o.id === id);
-                        if(item) { if(!item.images) item.images = []; item.images.push(compressed); saveData(); }
-                    };
-                    reader.readAsDataURL(file);
-                }
-            };
-
             return { 
-                weeks, currentWeekId, currentTab, syncText, activeWeek, previewUrl, dragOverId, userInput, saveData,
-                sortedOptions: computed(() => activeWeek.value ? [...activeWeek.value.strategyOptions].sort((a,b) => b.votes - a.votes) : []),
+                weeks, currentWeekId, currentTab, syncText, userInput, previewUrl, dragOverId, newAd, apList, dsList,
+                activeWeek, sortedOptions: computed(() => activeWeek.value ? [...activeWeek.value.strategyOptions].sort((a,b)=>b.votes-a.votes) : []),
+                sortedAds: computed(() => activeWeek.value ? [...activeWeek.value.performanceAds].sort((a,b)=>b.spend-a.spend) : []),
+                getStrategyTitle: (sid) => activeWeek.value?.strategyOptions.find(o=>o.id===sid)?.title || "未知需求",
                 addNewWeek: () => {
-                    const n = prompt("周次名:"); if(!n) return;
-                    const id = Date.now();
-                    weeks.value.push({
-                        id, name: n,
-                        strategyOptions: presetTitles.map((t, i) => ({ id: 'st'+id+i, index: i+1, title: t, votes: 0, note: "", images: [], showNote: false })),
-                        performanceAds: []
-                    });
+                    const n = prompt("周次:"); if(!n) return; const id = Date.now();
+                    weeks.value.push({id, name:n, strategyOptions: presetTitles.map((t,i)=>({id:'st'+id+i, index:i+1, title:t, votes:0, note:"", images:[], showNote:false})), performanceAds:[]});
                     currentWeekId.value = id; saveData();
                 },
                 handleCommand: () => {
                     const v = userInput.value.trim(); if(!v) return;
-                    const target = activeWeek.value.strategyOptions.find(o => o.index === parseInt(v));
-                    if(target) target.votes++;
-                    else activeWeek.value.strategyOptions.push({ id: Date.now(), index: activeWeek.value.strategyOptions.length+1, title: v, votes: 1, note: "", images: [], showNote: false });
+                    const t = activeWeek.value.strategyOptions.find(o=>o.index===parseInt(v));
+                    if(t) t.votes++; else activeWeek.value.strategyOptions.push({id:Date.now(), index:activeWeek.value.strategyOptions.length+1, title:v, votes:1, note:"", images:[], showNote:false});
                     userInput.value = ""; saveData();
                 },
+                addAdCombo: () => {
+                    if(!newAd.value.strategyId) return;
+                    activeWeek.value.performanceAds.push({id:Date.now(), aps:[...newAd.value.aps], ds:newAd.value.ds, strategyId:newAd.value.strategyId, spend:0, orders:0, analysis:"", images:[], showNote:false});
+                    newAd.value.aps = ["AP"]; saveData();
+                },
                 changeVote: (id, d) => { const t = activeWeek.value.strategyOptions.find(o => o.id === id); if(t) { t.votes = Math.max(0, t.votes + d); saveData(); } },
-                removeWeek: (i) => { if(confirm("确定删除？")) { weeks.value.splice(i, 1); saveData(); } },
+                removeWeek: (idx) => { if(confirm("删除周次？")) { weeks.value.splice(idx,1); saveData(); } },
+                removeAd: (id) => { activeWeek.value.performanceAds = activeWeek.value.performanceAds.filter(a=>a.id!==id); saveData(); },
                 triggerUpload: (type, id) => document.getElementById(`file-${type}-${id}`).click(),
                 handleFile: (e, type, id) => processImages(Array.from(e.target.files), type, id),
-                onPaste: (e, type, id) => processImages(Array.from(e.clipboardData.items).filter(i => i.type.indexOf('image')!==-1).map(i => i.getAsFile()), type, id),
-                onDrop: (e, type, id) => { dragOverId.value = null; processImages(Array.from(e.dataTransfer.files), type, id); }
+                onPaste: (e, type, id) => processImages(Array.from(e.clipboardData.items).filter(i=>i.type.indexOf('image')!==-1).map(i=>i.getAsFile()), type, id),
+                onDrop: (e, type, id) => { dragOverId.value=null; processImages(Array.from(e.dataTransfer.files), type, id); }
             };
         }
     }).mount('#app');
